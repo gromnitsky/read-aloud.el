@@ -13,6 +13,10 @@
     (cmd "cscript" args "C:\\Program Files\\Jampal\\ptts.vbs")
     ))
 
+(defconst read-aloud-max 20)		; chars
+
+
+
 (defconst read-aloud--logbufname "*Read-Aloud Log*")
 (defconst read-aloud--prname "read-aloud")
 
@@ -141,6 +145,43 @@ But he's just as dead as if he were wrong."))
 
       (ignore-errors (line-move 1))
       (setq read-aloud--c-bufpos (point))
+      )))
+
+(cl-defun read-aloud--grab-text(buf point)
+  "Return (text \"omglol\" beg 10 end 20) plist or nil on
+eof. BUF & POINT are the starting location for the job."
+  (let ((sep-re "[,.:!;]\\|-\\{2,\\}")
+	t2 max p)
+
+    (with-current-buffer buf
+      (goto-char point)
+      ;; move to the first non-space char
+      (skip-chars-forward "[[:space:]\n]")
+
+      (setq max (+ (point) read-aloud-max 1))
+      (if (> max (point-max)) (setq max (point-max)))
+      (setq t2 (buffer-substring-no-properties (point) max))
+
+      (if (string-empty-p (string-trim-right t2))
+	  ;; we have spaces at the end of buffer, there is nothing to grab
+	  (cl-return-from read-aloud--grab-text nil))
+
+      ;; look for the 1st non-space in `t` from the end & cut off that part
+      (setq p (string-match "[[:space:]\n]" (reverse t2)) )
+      (if p (setq t2 (substring t2 0 (- (length t2) p 1))))
+      (read-aloud--log t2)
+
+      ;; in case we have something like --------------------
+      (unless (string-match (concat "^\\(" sep-re "\\)+$") t2)
+	(progn
+	  ;; otherwise, cut off everything after the punctuation
+	  (setq p (string-match sep-re t2) )
+	  (if p (setq t2 (substring t2 0 p)))
+	  ))
+
+      `(text ,t2
+	     beg ,(point)
+	     end ,(+ (point) (length t2) 1))
       )))
 
 (provide 'read-aloud)
