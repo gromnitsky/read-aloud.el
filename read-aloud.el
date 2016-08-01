@@ -3,7 +3,7 @@
 (require 'cl-lib)
 (require 'subr-x)
 
-(defconst read-aloud-engine 'spd-say)
+(defconst read-aloud-engine 'flite)
 (defconst read-aloud-engines
   '(spd-say				; Linux/FreeBSD only
     (cmd "spd-say" args ("-e" "-w"))
@@ -13,7 +13,10 @@
     (cmd "cscript" args "C:\\Program Files\\Jampal\\ptts.vbs")
     ))
 
-(defconst read-aloud-max 20)		; chars
+(defconst read-aloud-max 160)		; chars
+(defface read-aloud-text-face '((t :inverse-video t))
+  "For highlighting the text that is being read")
+
 
 
 
@@ -24,6 +27,7 @@
 (defconst read-aloud--c-buf nil)
 (defconst read-aloud--c-bufpos nil)
 (defconst read-aloud--c-locked nil)
+(defconst read-aloud--c-overlay nil)
 
 (defun read-aloud--log(msg &optional args)
   (let ((buf (get-buffer-create read-aloud--logbufname)))
@@ -64,6 +68,12 @@ But he's just as dead as if he were wrong."))
 (defun read-aloud--valid-str-p (str)
   (and str (not (equal "" (string-trim str)))))
 
+(defun read-aloud--overlay-rm()
+  (if read-aloud--c-overlay
+      (progn
+	(delete-overlay read-aloud--c-overlay)
+	(setq read-aloud--c-overlay nil))))
+
 (defun read-aloud--reset()
   "Reset internal state."
   (setq read-aloud--c-pr nil)
@@ -71,6 +81,7 @@ But he's just as dead as if he were wrong."))
   (setq read-aloud--c-bufpos nil)
   (setq read-aloud--c-locked nil)
 
+  (read-aloud--overlay-rm)
   (read-aloud--log "RESET"))
 
 (cl-defun read-aloud--string(str)
@@ -93,7 +104,7 @@ But he's just as dead as if he were wrong."))
        (cl-return-from read-aloud--string nil)))
 
     (set-process-sentinel read-aloud--c-pr 'read-aloud--sentinel)
-    (setq str (string-trim str))
+    (setq str (concat (string-trim str) "\n"))
     (read-aloud--log "Sending: %s" str)
     (process-send-string read-aloud--c-pr str)
     (process-send-eof read-aloud--c-pr)
@@ -105,6 +116,7 @@ But he's just as dead as if he were wrong."))
   (if (equal event "finished")
       (progn
 	(setq read-aloud--c-locked nil)
+	(read-aloud--overlay-rm)
 	;; FIXME
 	(read-aloud-buf))
 
@@ -130,7 +142,7 @@ But he's just as dead as if he were wrong."))
   (unless read-aloud--c-buf (setq read-aloud--c-buf (current-buffer)))
   (unless read-aloud--c-bufpos (setq read-aloud--c-bufpos (point)))
 
-  (let (line)
+  (let (tb)
     (with-current-buffer read-aloud--c-buf
       (if (eobp)
 	  (progn
@@ -139,19 +151,28 @@ But he's just as dead as if he were wrong."))
 	    (cl-return-from read-aloud-buf)))
 
       (goto-char read-aloud--c-bufpos)
-      (setq line (wordnut-u-line-cur))
+      (setq tb (read-aloud--grab-text read-aloud--c-buf (point)))
+      (unless tb
+	  (progn
+	    (read-aloud--log "SPACES AT THE END OF BUFFER")
+	    (read-aloud--reset)
+	    (cl-return-from read-aloud-buf)))
 
-      (read-aloud--string line)
+      ;; highlight text
+      (setq read-aloud--c-overlay
+	    (make-overlay (plist-get tb 'beg) (plist-get tb 'end)))
+      (overlay-put read-aloud--c-overlay 'face 'read-aloud-text-face)
 
-      (ignore-errors (line-move 1))
-      (setq read-aloud--c-bufpos (point))
+      (read-aloud--string (plist-get tb 'text))
+
+      (setq read-aloud--c-bufpos (plist-get tb 'end))
       )))
 
 (cl-defun read-aloud--grab-text(buf point)
   "Return (text \"omglol\" beg 10 end 20) plist or nil on
 eof. BUF & POINT are the starting location for the job."
   (let ((sep-re "[,.:!;]\\|-\\{2,\\}")
-	t2 max p)
+	t2 raw max p)
 
     (with-current-buffer buf
       (goto-char point)
@@ -166,19 +187,28 @@ eof. BUF & POINT are the starting location for the job."
 	  ;; we have spaces at the end of buffer, there is nothing to grab
 	  (cl-return-from read-aloud--grab-text nil))
 
+      (if (= max (point-max))
+	  (progn
+	    (read-aloud--log "text grab: `%s'" t2)
+	    (cl-return-from read-aloud--grab-text
+	      `(text ,t2
+		     beg ,(point)
+		     end ,max) )))
+
       ;; look for the 1st non-space in `t` from the end & cut off that part
       (setq p (string-match "[[:space:]\n]" (reverse t2)) )
       (if p (setq t2 (substring t2 0 (- (length t2) p 1))))
-      (read-aloud--log t2)
+      (setq raw t2)
+      (read-aloud--log "text grab raw: `%s'" raw)
+
+      ;; cut off everything after the punctuation
+      (setq p (string-match sep-re (reverse t2) ))
+      (if p (setq t2 (substring t2 0 (- (length t2) p 1))))
 
       ;; in case we have something like --------------------
-      (unless (string-match (concat "^\\(" sep-re "\\)+$") t2)
-	(progn
-	  ;; otherwise, cut off everything after the punctuation
-	  (setq p (string-match sep-re t2) )
-	  (if p (setq t2 (substring t2 0 p)))
-	  ))
+      (if (string-match (concat "^\\(" sep-re "\\)+$") t2) (setq t2 raw))
 
+      (read-aloud--log "text grab: `%s'" t2)
       `(text ,t2
 	     beg ,(point)
 	     end ,(+ (point) (length t2) 1))
