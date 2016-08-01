@@ -71,7 +71,7 @@ But he's just as dead as if he were wrong."))
 
 (cl-defun read-aloud--string(str)
   "Open an async process, feed its stdin with STR."
-  (unless (read-aloud--valid-str-p str) (cl-return-from read-aloud-string nil))
+  (unless (read-aloud--valid-str-p str) (cl-return-from read-aloud--string nil))
 
   (let ((process-connection-type nil)) ; (start-process) requires this
 
@@ -86,9 +86,9 @@ But he's just as dead as if he were wrong."))
        (read-aloud--reset)
        (user-error "External TTS engine failed to start: %s"
 		   (error-message-string err))
-       (cl-return-from read-aloud-string nil)))
+       (cl-return-from read-aloud--string nil)))
 
-    (set-process-sentinel read-aloud--c-pr 'read-aloud-sentinel)
+    (set-process-sentinel read-aloud--c-pr 'read-aloud--sentinel)
     (setq str (string-trim str))
     (read-aloud--log "Sending: %s" str)
     (process-send-string read-aloud--c-pr str)
@@ -96,20 +96,18 @@ But he's just as dead as if he were wrong."))
     t
     ))
 
-(defun read-aloud-sentinel (process event)
-  (let (str)
+(defun read-aloud--sentinel (process event)
+  (setq event (string-trim event))
+  (if (equal event "finished")
+      (progn
+	(setq read-aloud--c-locked nil)
+	;; FIXME
+	(read-aloud-buf))
 
-    (setq event (string-trim event))
-    (if (equal event "finished")
-	(progn
-	  (setq read-aloud--c-locked nil)
-	  ;; FIXME
-	  (read-aloud-buf))
-
-      ;; else
-      (read-aloud--reset)
-      (user-error "%s ended w/ the event: %s" process event)
-      )))
+    ;; else
+    (read-aloud--reset)
+    (user-error "%s ended w/ the event: %s" process event)
+    ))
 
 (defun read-aloud-stop ()
   (interactive)
