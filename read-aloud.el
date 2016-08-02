@@ -1,10 +1,10 @@
-;; read-aloud.el -- An interface to TTS engines -*- lexical-binding: t -*-
+;; read-aloud.el -- A simple interface to TTS engines -*- lexical-binding: t -*-
 
 (require 'cl-lib)
 (require 'subr-x)
 
-(defconst read-aloud-engine 'flite)
-(defconst read-aloud-engines
+(defvar read-aloud-engine 'flite)
+(defvar read-aloud-engines
   '(spd-say				; Linux/FreeBSD only
     (cmd "spd-say" args ("-e" "-w"))
     flite				; Cygwin?
@@ -13,7 +13,7 @@
     (cmd "cscript" args "C:\\Program Files\\Jampal\\ptts.vbs")
     ))
 
-(defconst read-aloud-max 160)		; chars
+(defvar read-aloud-max 160)		; chars
 (defface read-aloud-text-face '((t :inverse-video t))
   "For highlighting the text that is being read")
 
@@ -39,7 +39,7 @@
       )))
 
 (defun read-aloud-test ()
-  "Opens a new tmp buffer, inserts a string, tries to read it."
+  "Open a new tmp buffer, insert a string, try to read it."
   (interactive)
   (let ((buf (get-buffer-create "*Read-Aloud Test*")))
 
@@ -54,7 +54,7 @@ But he's just as dead as if he were wrong."))
     (switch-to-buffer read-aloud--logbufname)
     (goto-char (point-max))
 
-    (wordnut-u-switch-to-buffer buf)
+    (read-aloud--u-switch-to-buffer buf)
     (goto-char (point-min))
 
     (setq read-aloud--c-buf buf)
@@ -89,7 +89,7 @@ But he's just as dead as if he were wrong."))
 (cl-defun read-aloud--string(str source)
   "Open an async process, feed its stdin with STR. SOURCE is an
 arbitual string like 'buffer', 'word' or 'selection'."
-  (unless (read-aloud--valid-str-p str) (cl-return-from read-aloud--string nil))
+  (unless (read-aloud--valid-str-p str) (cl-return-from read-aloud--string))
 
   (let ((process-connection-type nil)) ; (start-process) requires this
 
@@ -103,15 +103,13 @@ arbitual string like 'buffer', 'word' or 'selection'."
       (error
        (read-aloud--reset)
        (user-error "External TTS engine failed to start: %s"
-		   (error-message-string err))
-       (cl-return-from read-aloud--string nil)))
+		   (error-message-string err))) )
 
     (set-process-sentinel read-aloud--c-pr 'read-aloud--sentinel)
     (setq str (concat (string-trim str) "\n"))
     (read-aloud--log "Sending: `%s`" str)
     (process-send-string read-aloud--c-pr str)
     (process-send-eof read-aloud--c-pr)
-    t
     ))
 
 (defun read-aloud--sentinel (process event)
@@ -134,10 +132,10 @@ arbitual string like 'buffer', 'word' or 'selection'."
       )))
 
 (defun read-aloud-stop ()
+  "Ask a TTS engine to stop."
   (interactive)
   (kill-process read-aloud--c-pr)
-  (read-aloud--log "INTERRUPTED BY USER")
-  )
+  (read-aloud--log "INTERRUPTED BY USER"))
 
 (cl-defun read-aloud-buf()
   "Read the current buffer, highlighting words along the
@@ -222,6 +220,7 @@ eof. BUF & POINT are the starting location for the job."
   "Pronounce a word under the pointer. If under there is rubbish,
 ask user for an additional input."
   (interactive)
+
   (when read-aloud--c-locked
     (read-aloud-stop)
     (cl-return-from read-aloud-current-word))
@@ -245,6 +244,15 @@ ask user for an additional input."
 
   (unless (use-region-p) (user-error "No selection"))
   (read-aloud--string (buffer-substring-no-properties beg end) "selection"))
+
+
+
+(defun read-aloud--u-switch-to-buffer(buf)
+  (unless (eq (current-buffer) buf)
+    (unless (cdr (window-list))
+      (split-window-vertically))
+    (other-window 1)
+    (switch-to-buffer buf)))
 
 
 
