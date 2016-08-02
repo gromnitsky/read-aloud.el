@@ -20,9 +20,11 @@
 
 
 
+(defvar read-aloud-word-hist '())	; (*-current-word) uses it
 (defconst read-aloud--logbufname "*Read-Aloud Log*")
 (defconst read-aloud--prname "read-aloud")
 
+;; this should be in cl-defstruct
 (defconst read-aloud--c-pr nil)
 (defconst read-aloud--c-buf nil)
 (defconst read-aloud--c-bufpos nil)
@@ -84,15 +86,16 @@ But he's just as dead as if he were wrong."))
   (read-aloud--overlay-rm)
   (read-aloud--log "RESET"))
 
-(cl-defun read-aloud--string(str)
-  "Open an async process, feed its stdin with STR."
+(cl-defun read-aloud--string(str source)
+  "Open an async process, feed its stdin with STR. SOURCE is an
+arbitual string like 'buffer', 'word' or 'selection'."
   (unless (read-aloud--valid-str-p str) (cl-return-from read-aloud--string nil))
 
   (let ((process-connection-type nil)) ; (start-process) requires this
 
     (if read-aloud--c-locked (error "read-aloud is LOCKED"))
 
-    (setq read-aloud--c-locked "buffer")
+    (setq read-aloud--c-locked source)
     (condition-case err
 	(setq read-aloud--c-pr
 	      (apply 'start-process read-aloud--prname nil
@@ -112,18 +115,23 @@ But he's just as dead as if he were wrong."))
     ))
 
 (defun read-aloud--sentinel (process event)
-  (setq event (string-trim event))
-  (if (equal event "finished")
-      (progn
-	(setq read-aloud--c-locked nil)
-	(read-aloud--overlay-rm)
-	;; FIXME
-	(read-aloud-buf))
+  (let ((source read-aloud--c-locked))
 
-    ;; else
-    (read-aloud--reset)
-    (user-error "%s ended w/ the event: %s" process event)
-    ))
+    (setq event (string-trim event))
+    (if (equal event "finished")
+	(progn
+	  (read-aloud--overlay-rm)
+	  (setq read-aloud--c-locked nil)
+	  (cond
+	   ((equal source "buffer") (read-aloud-buf))
+	   ((equal source "word") t)	  ; do nothing
+	   ((equal source "selection") t) ; do nothing
+	   (t (error "unknown source: %s" source))) )
+
+      ;; else
+      (read-aloud--reset)
+      (user-error "%s ended w/ the event: %s" process event)
+      )))
 
 (defun read-aloud-stop ()
   (interactive)
@@ -132,23 +140,23 @@ But he's just as dead as if he were wrong."))
   )
 
 (cl-defun read-aloud-buf()
+  "Read the current buffer, highlighting words along the
+read. Run it again to stop reading."
   (interactive)
 
-  (if read-aloud--c-locked
-      (progn
-	(read-aloud-stop)
-	(cl-return-from read-aloud-buf)))
+  (when read-aloud--c-locked
+    (read-aloud-stop)
+    (cl-return-from read-aloud-buf))
 
   (unless read-aloud--c-buf (setq read-aloud--c-buf (current-buffer)))
   (unless read-aloud--c-bufpos (setq read-aloud--c-bufpos (point)))
 
   (let (tb)
     (with-current-buffer read-aloud--c-buf
-      (if (eobp)
-	  (progn
-	    (read-aloud--log "END OF BUFFER")
-	    (read-aloud--reset)
-	    (cl-return-from read-aloud-buf)))
+      (when (eobp)
+	(read-aloud--log "END OF BUFFER")
+	(read-aloud--reset)
+	(cl-return-from read-aloud-buf))
 
       (goto-char read-aloud--c-bufpos)
       (setq tb (read-aloud--grab-text read-aloud--c-buf (point)))
@@ -163,7 +171,7 @@ But he's just as dead as if he were wrong."))
 	    (make-overlay (plist-get tb 'beg) (plist-get tb 'end)))
       (overlay-put read-aloud--c-overlay 'face 'read-aloud-text-face)
 
-      (read-aloud--string (plist-get tb 'text))
+      (read-aloud--string (plist-get tb 'text) "buffer")
 
       (setq read-aloud--c-bufpos (plist-get tb 'end))
       )))
@@ -208,5 +216,34 @@ eof. BUF & POINT are the starting location for the job."
 	       end ,(+ pstart (length t2) 1))
 	))))
 
+(cl-defun read-aloud-current-word(&optional str)
+  "Pronounce a word under the pointer. If under there is rubbish,
+ask user for an additional input."
+  (interactive)
+  (when read-aloud--c-locked
+    (read-aloud-stop)
+    (cl-return-from read-aloud-current-word))
+
+  (let ((word (current-word)) )
+
+    (unless (string-match "[[:alnum:]]" word)
+      ;; maybe we should share the hist list w/ `wordnut-completion-hist`?
+      (setq word (read-string "read aloud: " word 'read-aloud-word-hist)) )
+
+    (read-aloud--string word "word")
+    ))
+
+(cl-defun read-aloud-selection(beg end)
+  "Pronounce all that is selected."
+  (interactive "r")
+
+  (when read-aloud--c-locked
+    (read-aloud-stop)
+    (cl-return-from read-aloud-selection))
+
+  (unless (use-region-p) (user-error "No selection"))
+  (read-aloud--string (buffer-substring-no-properties beg end) "selection"))
+
+
 
 (provide 'read-aloud)
