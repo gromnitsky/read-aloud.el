@@ -158,8 +158,7 @@ read. Run it again to stop reading."
 	(read-aloud--reset)
 	(cl-return-from read-aloud-buf))
 
-      (goto-char read-aloud--c-bufpos)
-      (setq tb (read-aloud--grab-text read-aloud--c-buf (point)))
+      (setq tb (read-aloud--grab-text read-aloud--c-buf read-aloud--c-bufpos))
       (unless tb
 	(progn
 	  (read-aloud--log "SPACES AT THE END OF BUFFER")
@@ -171,6 +170,7 @@ read. Run it again to stop reading."
 	    (make-overlay (plist-get tb 'beg) (plist-get tb 'end)))
       (overlay-put read-aloud--c-overlay 'face 'read-aloud-text-face)
 
+      (goto-char (plist-get tb 'end))
       (read-aloud--string (plist-get tb 'text) "buffer")
 
       (setq read-aloud--c-bufpos (plist-get tb 'end))
