@@ -1,9 +1,25 @@
-;; read-aloud.el -- A simple interface to TTS engines -*- lexical-binding: t -*-
+;; read-aloud.el --- A simple interface to TTS engines  -*- lexical-binding: t; -*-
 
-(require 'cl-lib)
-(require 'subr-x)
+;; Author: Alexander Gromnitsky <alexander.gromnitsky@gmail.com>
+;; Version: 0.0.1
+;; Package-Requires: ((emacs "24.4"))
+;; Keywords: multimedia
+;; URL: https://github.com/gromnitsky/read-aloud
 
-(defvar read-aloud-engine 'flite)
+;; This file is not part of GNU Emacs.
+
+;;; License:
+
+;; MIT
+
+;;; Commentary:
+
+;; This package uses an external TTS engine (like flite) to pronounce
+;; the word at or near point, the selected region or a whole buffer.
+
+;;; Code:
+
+(defvar read-aloud-engine 'spd-say)
 (defvar read-aloud-engines
   '(spd-say				; Linux/FreeBSD only
     (cmd "spd-say" args ("-e" "-w"))
@@ -17,12 +33,13 @@
 (defface read-aloud-text-face '((t :inverse-video t))
   "For highlighting the text that is being read")
 
-
 
+
+(require 'cl-lib)
+(require 'subr-x)
 
 (defvar read-aloud-word-hist '())	; (*-current-word) uses it
 (defconst read-aloud--logbufname "*Read-Aloud Log*")
-(defconst read-aloud--prname "read-aloud")
 
 ;; this should be in cl-defstruct
 (defconst read-aloud--c-pr nil)
@@ -38,6 +55,7 @@
       (insert-before-markers (format (concat msg "\n") args))
       )))
 
+;;;###autoload
 (defun read-aloud-test ()
   "Open a new tmp buffer, insert a string, try to read it."
   (interactive)
@@ -93,12 +111,12 @@ arbitual string like 'buffer', 'word' or 'selection'."
 
   (let ((process-connection-type nil)) ; (start-process) requires this
 
-    (if read-aloud--c-locked (error "read-aloud is LOCKED"))
+    (if read-aloud--c-locked (error "Read-aloud is LOCKED"))
 
     (setq read-aloud--c-locked source)
     (condition-case err
 	(setq read-aloud--c-pr
-	      (apply 'start-process read-aloud--prname nil
+	      (apply 'start-process "read-aloud" nil
 		     (read-aloud--cmd) (read-aloud--args)))
       (error
        (read-aloud--reset)
@@ -124,19 +142,21 @@ arbitual string like 'buffer', 'word' or 'selection'."
 	   ((equal source "buffer") (read-aloud-buf))
 	   ((equal source "word") t)	  ; do nothing
 	   ((equal source "selection") t) ; do nothing
-	   (t (error "unknown source: %s" source))) )
+	   (t (error "Unknown source: %s" source))) )
 
       ;; else
       (read-aloud--reset)
       (user-error "%s ended w/ the event: %s" process event)
       )))
 
+;;;###autoload
 (defun read-aloud-stop ()
   "Ask a TTS engine to stop."
   (interactive)
   (kill-process read-aloud--c-pr)
   (read-aloud--log "INTERRUPTED BY USER"))
 
+;;;###autoload
 (cl-defun read-aloud-buf()
   "Read the current buffer, highlighting words along the
 read. Run it again to stop reading."
@@ -216,6 +236,7 @@ eof. BUF & POINT are the starting location for the job."
 	       end ,(+ pstart (length t2)))
 	))))
 
+;;;###autoload
 (cl-defun read-aloud-current-word()
   "Pronounce a word under the pointer. If under there is rubbish,
 ask user for an additional input."
@@ -234,6 +255,7 @@ ask user for an additional input."
     (read-aloud--string word "word")
     ))
 
+;;;###autoload
 (cl-defun read-aloud-selection(beg end)
   "Pronounce all that is selected."
   (interactive "r")
@@ -257,3 +279,4 @@ ask user for an additional input."
 
 
 (provide 'read-aloud)
+;;; read-aloud.el ends here
