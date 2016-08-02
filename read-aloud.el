@@ -105,7 +105,7 @@ But he's just as dead as if he were wrong."))
 
     (set-process-sentinel read-aloud--c-pr 'read-aloud--sentinel)
     (setq str (concat (string-trim str) "\n"))
-    (read-aloud--log "Sending: %s" str)
+    (read-aloud--log "Sending: `%s`" str)
     (process-send-string read-aloud--c-pr str)
     (process-send-eof read-aloud--c-pr)
     t
@@ -153,10 +153,10 @@ But he's just as dead as if he were wrong."))
       (goto-char read-aloud--c-bufpos)
       (setq tb (read-aloud--grab-text read-aloud--c-buf (point)))
       (unless tb
-	  (progn
-	    (read-aloud--log "SPACES AT THE END OF BUFFER")
-	    (read-aloud--reset)
-	    (cl-return-from read-aloud-buf)))
+	(progn
+	  (read-aloud--log "SPACES AT THE END OF BUFFER")
+	  (read-aloud--reset)
+	  (cl-return-from read-aloud-buf)))
 
       ;; highlight text
       (setq read-aloud--c-overlay
@@ -171,47 +171,42 @@ But he's just as dead as if he were wrong."))
 (cl-defun read-aloud--grab-text(buf point)
   "Return (text \"omglol\" beg 10 end 20) plist or nil on
 eof. BUF & POINT are the starting location for the job."
-  (let ((sep-re "[,.:!;]\\|-\\{2,\\}")
-	t2 raw max p)
+  (let (max t2 p pstart chunks)
 
     (with-current-buffer buf
-      (goto-char point)
-      ;; move to the first non-space char
-      (skip-chars-forward "[[:space:]\n]")
+      (save-excursion
+	(goto-char point)
+	;; move to the first non-space char
+	(skip-chars-forward "[[:space:]\n]")
 
-      (setq max (+ (point) read-aloud-max 1))
-      (if (> max (point-max)) (setq max (point-max)))
-      (setq t2 (buffer-substring-no-properties (point) max))
+	(setq max (+ (point) read-aloud-max 1))
+	(if (> max (point-max)) (setq max (point-max)))
+	(setq t2 (buffer-substring-no-properties (point) max))
 
-      (if (string-empty-p (string-trim-right t2))
-	  ;; we have spaces at the end of buffer, there is nothing to grab
-	  (cl-return-from read-aloud--grab-text nil))
+	(if (string-empty-p (string-trim-right t2))
+	    ;; we have spaces at the end of buffer, there is nothing to grab
+	    (cl-return-from read-aloud--grab-text nil))
 
-      (if (= max (point-max))
+	(setq pstart (point))
+
+	(unless (= max (point-max))
 	  (progn
-	    (read-aloud--log "text grab: `%s'" t2)
-	    (cl-return-from read-aloud--grab-text
-	      `(text ,t2
-		     beg ,(point)
-		     end ,max) )))
+	    ;; look for the 1st non-space in `t` from the end & cut
+	    ;; off that part
+	    (setq p (string-match "[[:space:]\n]" (reverse t2)) )
+	    (if p (setq t2 (substring t2 0 (- (length t2) p 1))) )))
 
-      ;; look for the 1st non-space in `t` from the end & cut off that part
-      (setq p (string-match "[[:space:]\n]" (reverse t2)) )
-      (if p (setq t2 (substring t2 0 (- (length t2) p 1))))
-      (setq raw t2)
-      (read-aloud--log "text grab raw: `%s'" raw)
+	(setq chunks (split-string t2 "[,.:!;]\\|-\\{2,\\}\\|\n\\{2,\\}" t))
+	(if chunks
+	    (progn
+	      (search-forward (car chunks))
+	      (setq t2 (buffer-substring-no-properties pstart (point))) ))
 
-      ;; cut off everything after the punctuation
-      (setq p (string-match sep-re (reverse t2) ))
-      (if p (setq t2 (substring t2 0 (- (length t2) p 1))))
+	(read-aloud--log "text grab: `%s`" t2)
+	`(text ,t2
+	       beg ,pstart
+	       end ,(+ pstart (length t2) 1))
+	))))
 
-      ;; in case we have something like --------------------
-      (if (string-match (concat "^\\(" sep-re "\\)+$") t2) (setq t2 raw))
-
-      (read-aloud--log "text grab: `%s'" t2)
-      `(text ,t2
-	     beg ,(point)
-	     end ,(+ (point) (length t2) 1))
-      )))
 
 (provide 'read-aloud)
