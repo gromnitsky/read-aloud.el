@@ -19,10 +19,10 @@
 
 ;;; Code:
 
-(defvar read-aloud-engine 'spd-say)
+(defvar read-aloud-engine 'speech-dispatcher)
 (defvar read-aloud-engines
-  '(spd-say				; Linux/FreeBSD only
-    (cmd "spd-say" args ("-e" "-w"))
+  '(speech-dispatcher			; Linux/FreeBSD only
+    (cmd "spd-say" args ("-e" "-w") kill "spd-say -S")
     flite				; Cygwin?
     (cmd "flite" args nil)
     jampal				; Windows
@@ -154,6 +154,12 @@ arbitual string like 'buffer', 'word' or 'selection'."
   "Ask a TTS engine to stop."
   (interactive)
   (kill-process read-aloud--c-pr)
+
+  ;; if a tts engine has a separate step to switch itself off, use it
+  (let ((c (plist-get (plist-get read-aloud-engines read-aloud-engine) 'kill)))
+    (when c
+      (start-process-shell-command "read-aloud-kill" read-aloud--logbufname c)))
+
   (read-aloud--log "INTERRUPTED BY USER"))
 
 ;;;###autoload
