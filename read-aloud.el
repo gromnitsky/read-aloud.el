@@ -179,15 +179,14 @@ read. Run it again to stop reading."
 (cl-defun read-aloud--grab-text(buf point)
   "Return (text \"omglol\" beg 10 end 20) plist or nil on
 eof. BUF & POINT are the starting location for the job."
-  (let (max t2 p pstart chunks)
+  (let (max t2 p pstart chunks pchunk)
 
     (with-current-buffer buf
       (save-excursion
 	(goto-char point)
-	;; move to the first non-space char
-	(skip-chars-forward "[[:space:]\n]")
+	(skip-chars-forward "[\\-,.:!;[:space:]\r\n]")
 
-	(setq max (+ (point) read-aloud-max 1))
+	(setq max (+ (point) read-aloud-max))
 	(if (> max (point-max)) (setq max (point-max)))
 	(setq t2 (buffer-substring-no-properties (point) max))
 
@@ -201,22 +200,25 @@ eof. BUF & POINT are the starting location for the job."
 	  (progn
 	    ;; look for the 1st non-space in `t` from the end & cut
 	    ;; off that part
-	    (setq p (string-match "[[:space:]\n]" (reverse t2)) )
+	    (setq p (string-match "[[:space:]\r\n]" (reverse t2)) )
 	    (if p (setq t2 (substring t2 0 (- (length t2) p 1))) )))
 
 	(setq chunks (split-string t2 "[,.:!;]\\|-\\{2,\\}\\|\n\\{2,\\}" t))
 	(if chunks
 	    (progn
 	      (search-forward (car chunks))
-	      (setq t2 (buffer-substring-no-properties pstart (point))) ))
+	      (setq pchunk (point))
+	      (search-backward (car chunks))
+	      (setq pstart (point))
+	      (setq t2 (buffer-substring-no-properties pstart pchunk)) ))
 
 	(read-aloud--log "text grab: `%s`" t2)
 	`(text ,t2
 	       beg ,pstart
-	       end ,(+ pstart (length t2) 1))
+	       end ,(+ pstart (length t2)))
 	))))
 
-(cl-defun read-aloud-current-word(&optional str)
+(cl-defun read-aloud-current-word()
   "Pronounce a word under the pointer. If under there is rubbish,
 ask user for an additional input."
   (interactive)
