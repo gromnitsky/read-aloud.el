@@ -248,7 +248,7 @@ eof. BUF & POINT are the starting location for the job."
 ask user for an additional input."
   (let ((word (current-word)) )
 
-    (unless (string-match "[[:alnum:]]" word)
+    (unless (and word (string-match "[[:alnum:]]" word))
       ;; maybe we should share the hist list w/ `wordnut-completion-hist`?
       (setq word (read-string "read aloud: " word 'read-aloud-word-hist)) )
 
