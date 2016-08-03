@@ -8,14 +8,18 @@ buffer.
 
 ![A screenshot of running read-aloud.el](https://raw.github.com/gromnitsky/read-aloud.el/master/test/alice.gif)
 
+## Requirements
+
+* Emacs 24.4+
+* A working TTS engine that has a CLI to it.
+
 ## Installation
 
 1. Setup at least one of the supported TTS engines (see below).
 
 2. Add to `~/.emacs`:
 
-		(add-to-list 'load-path "/the/dir/repo")
-		(require 'read-aloud)
+		(load-file "/the/repo/dir/read-aloud.el")
 
 ## Usage
 
@@ -26,30 +30,13 @@ To stop reading at any time you either run any of the commands above
 _again_, or do `M-x read-aloud-stop`.
 
 
-## TTS Engines
-
-See `read-aloud-engines` variable in `read-aloud.el` for the current
-list.
-
-### flite
-
-... is the easiest one. For example, on Fedora 24:
-
-	# dnf install flite
-
-Test it:
-
-	$ echo hello | flite
-
-Add to `~/.emacs`:
-
-	(setq read-aloud-engine 'flite)
+## Supported TTS Engines
 
 ### speech-dispatcher
 
-... contains a daemon that hides from the user all the details of a
-chosen tts engine. To communicate w/ the daemon, read-aloud.el employs
-`spd-say` CL util.
+... is the default one in read-aloud.el. It contains a daemon that
+hides from the user all the details of a chosen tts engine. To
+communicate w/ the daemon, read-aloud.el employs `spd-say` CL util.
 
 On Fedora 24:
 
@@ -73,9 +60,50 @@ Test it:
 
 	$ spd-say hello
 
+### flite
+
+... is the easiest one to use. For example, on Fedora 24:
+
+	# dnf install flite
+
+Test it:
+
+	$ echo hello | flite
+
+Add to `~/.emacs`:
+
+	(setq read-aloud-engine 'flite)
+
 ### Microsoft Speech API
 
-TODO
+[Jampal](http://jampal.sourceforge.net/ptts.html) provides a CL
+interface to SAPI. Install it, then test via:
+
+	> echo hello | cscript "C:\Program Files\Jampal\ptts.vbs"
+
+
+## Configuration
+
+To add/modify a tts engine, you'll need to edit `read-aloud-engines`
+plist. Here is the example for Windows:
+
+	(plist-put read-aloud-engines 'jampal
+	  '(cmd "cscript"
+			args ("C:\\Program Files\\Jampal\\ptts.vbs" "-r" "8")) )
+
+`args` should be a list or nil. To select a new entry,
+
+	(setq read-aloud-engine 'jampal)
+
+The CL util that communicates w/ the engine must wait until the text
+was pronounced (e.g. not exit immediately), otherwise
+`(read-aloud-buf)` won't be able to distinguish whether it's time to
+feed the engine w/ another chunk of the text. This is why we use
+spd-say w/ `-w` CLO.
+
+You can edit the face that `(read-aloud-buf)` uses w/ the usual
+
+	M-x customize-face RET read-aloud-text-face
 
 
 ## A Smoke Test
@@ -84,11 +112,6 @@ After you have configured your system tts engine, do `M-x
 read-aloud-test`. It should open 2 tmp windows: 1 log window & 1 w/ a
 sample text, then it should start reading automatically. After it
 finishes you may safely kill those 2 buffers.
-
-
-## Configuration
-
-TODO
 
 
 ## Bugs
