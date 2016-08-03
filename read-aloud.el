@@ -1,4 +1,4 @@
-;; read-aloud.el --- A simple interface to TTS engines  -*- lexical-binding: t; -*-
+;;; read-aloud.el --- A simple interface to TTS engines  -*- lexical-binding: t; -*-
 
 ;; Author: Alexander Gromnitsky <alexander.gromnitsky@gmail.com>
 ;; Version: 0.0.1
@@ -281,7 +281,7 @@ ask user for an additional input."
 
 ;; for emacs < 25
 (defun read-aloud--u-str-reverse (str)
-  "Reverse the str where str is a string"
+  "Reverse the STR."
   (apply #'string (reverse (string-to-list str))))
 
 
