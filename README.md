@@ -6,7 +6,7 @@ The package uses an external text-to-speech engine (like flite) to
 pronounce the word at or near point, the selected region or a whole
 buffer.
 
-[gif]
+![A screenshot of running read-aloud.el](https://raw.github.com/gromnitsky/read-aloud.el/master/test/alice.gif)
 
 ## Installation
 
