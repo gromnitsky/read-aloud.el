@@ -19,8 +19,7 @@ buffer.
 
 ## Usage
 
-* `M-x read-aloud-current-word`
-* `M-x read-aloud-selection`
+* `M-x read-aloud-this`
 * `M-x read-aloud-buf`
 
 To stop reading at any time you either run any of the commands above

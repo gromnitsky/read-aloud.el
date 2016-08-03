@@ -4,7 +4,7 @@
 ;; Version: 0.0.1
 ;; Package-Requires: ((emacs "24.4"))
 ;; Keywords: multimedia
-;; URL: https://github.com/gromnitsky/read-aloud
+;; URL: https://github.com/gromnitsky/read-aloud.el
 
 ;; This file is not part of GNU Emacs.
 
@@ -242,16 +242,9 @@ eof. BUF & POINT are the starting location for the job."
 	       end ,(+ pstart (length t2)))
 	))))
 
-;;;###autoload
-(cl-defun read-aloud-current-word()
+(cl-defun read-aloud--current-word()
   "Pronounce a word under the pointer. If under there is rubbish,
 ask user for an additional input."
-  (interactive)
-
-  (when read-aloud--c-locked
-    (read-aloud-stop)
-    (cl-return-from read-aloud-current-word))
-
   (let ((word (current-word)) )
 
     (unless (string-match "[[:alnum:]]" word)
@@ -262,16 +255,19 @@ ask user for an additional input."
     ))
 
 ;;;###autoload
-(cl-defun read-aloud-selection(beg end)
-  "Pronounce all that is selected."
-  (interactive "r")
+(cl-defun read-aloud-this()
+  "Pronounce either the selection or a word under the pointer."
+  (interactive)
 
   (when read-aloud--c-locked
     (read-aloud-stop)
     (cl-return-from read-aloud-selection))
 
-  (unless (use-region-p) (user-error "No selection"))
-  (read-aloud--string (buffer-substring-no-properties beg end) "selection"))
+  (if (use-region-p)
+      (read-aloud--string
+       (buffer-substring-no-properties (region-beginning) (region-end))
+       "selection")
+    (read-aloud--current-word)) )
 
 
 
