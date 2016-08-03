@@ -26,7 +26,7 @@
     flite				; Cygwin?
     (cmd "flite" args nil)
     jampal				; Windows
-    (cmd "cscript" args "C:\\Program Files\\Jampal\\ptts.vbs")
+    (cmd "cscript" args ("C:\\Program Files\\Jampal\\ptts.vbs" "-r" "5"))
     ))
 
 (defvar read-aloud-max 160)		; chars
@@ -224,7 +224,8 @@ eof. BUF & POINT are the starting location for the job."
 	  (progn
 	    ;; look for the 1st non-space in `t` from the end & cut
 	    ;; off that part
-	    (setq p (string-match "[[:space:]\r\n]" (reverse t2)) )
+	    (setq p (string-match "[[:space:]\r\n]"
+				  (read-aloud--u-str-reverse t2)) )
 	    (if p (setq t2 (substring t2 0 (- (length t2) p 1))) )))
 
 	(setq chunks (split-string t2 "[,.:!;]\\|-\\{2,\\}\\|\n\\{2,\\}" t))
@@ -277,6 +278,11 @@ ask user for an additional input."
       (split-window-vertically))
     (other-window 1)
     (switch-to-buffer buf)))
+
+;; for emacs < 25
+(defun read-aloud--u-str-reverse (str)
+  "Reverse the str where str is a string"
+  (apply #'string (reverse (string-to-list str))))
 
 
 
