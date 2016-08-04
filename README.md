@@ -108,10 +108,13 @@ You can edit the face that `(read-aloud-buf)` uses w/ the usual
 
 ## A Smoke Test
 
-After you have configured your system tts engine, do `M-x
-read-aloud-test`. It should open 2 tmp windows: 1 log window & 1 w/ a
-sample text, then it should start reading automatically. After it
-finishes you may safely kill those 2 buffers.
+After you have configured your system tts engine, do
+
+	M-x eval-expression RET (read-aloud-test) RET
+
+It should open 2 tmp windows: 1 log window & 1 w/ a sample text, then
+it should start reading automatically. After it finishes you may
+safely kill those 2 buffers.
 
 
 ## Bugs

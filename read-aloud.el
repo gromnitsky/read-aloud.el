@@ -55,10 +55,8 @@
       (insert-before-markers (format (concat msg "\n") args))
       )))
 
-;;;###autoload
 (defun read-aloud-test ()
   "Open a new tmp buffer, insert a string, try to read it."
-  (interactive)
   (let ((buf (get-buffer-create "*Read-Aloud Test*")))
 
     (with-current-buffer buf
