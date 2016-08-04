@@ -46,11 +46,22 @@
   (with-temp-buffer
     (let ((read-aloud-max 100))
       (insert "-aaaaa bbbbb\n\n12345")
-;      (should (equal '(text "aaaaa bbbbb" beg 2 end 13)
-;		     (read-aloud--grab-text (buffer-name) 1) ))
+      (should (equal '(text "aaaaa bbbbb" beg 2 end 13)
+		     (read-aloud--grab-text (buffer-name) 1) ))
       (should (equal '(text "12345" beg 15 end 20)
 		     (read-aloud--grab-text (buffer-name) 13) ))
       (should-not (read-aloud--grab-text (buffer-name) 20) )
+      )))
+
+(ert-deftest split1-win()
+  (with-temp-buffer
+    (let ((read-aloud-max 100))
+      (insert "-aaaaa bbbbb\r\n\r\n12345")
+      (should (equal '(text "aaaaa bbbbb" beg 2 end 13)
+		     (read-aloud--grab-text (buffer-name) 1) ))
+      (should (equal '(text "12345" beg 17 end 22)
+		     (read-aloud--grab-text (buffer-name) 13) ))
+      (should-not (read-aloud--grab-text (buffer-name) 22) )
       )))
 
 (ert-deftest split2()

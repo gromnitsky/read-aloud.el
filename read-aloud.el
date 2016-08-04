@@ -228,7 +228,8 @@ eof. BUF & POINT are the starting location for the job."
 				  (read-aloud--u-str-reverse t2)) )
 	    (if p (setq t2 (substring t2 0 (- (length t2) p 1))) )))
 
-	(setq chunks (split-string t2 "[,.:!;]\\|-\\{2,\\}\\|\n\\{2,\\}" t))
+	(setq chunks
+	      (split-string t2 "[,.:!;]\\|\\(-\\|\n\\|\r\n\\)\\{2,\\}" t))
 	(if chunks
 	    (progn
 	      (search-forward (car chunks))
