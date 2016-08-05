@@ -19,13 +19,13 @@
 
 ;;; Code:
 
-(defvar read-aloud-engine 'speech-dispatcher)
+(defvar read-aloud-engine "speech-dispatcher")
 (defvar read-aloud-engines
-  '(speech-dispatcher			; Linux/FreeBSD only
+  '("speech-dispatcher"			; Linux/FreeBSD only
     (cmd "spd-say" args ("-e" "-w") kill "spd-say -S")
-    flite				; Cygwin?
+    "flite"				; Cygwin?
     (cmd "flite" args nil)
-    jampal				; Windows
+    "jampal"				; Windows
     (cmd "cscript" args ("C:\\Program Files\\Jampal\\ptts.vbs" "-r" "5"))
     ))
 
@@ -77,11 +77,26 @@ But he's just as dead as if he were wrong."))
     (setq read-aloud--c-bufpos 1)
     (read-aloud-buf)))
 
+;;;###autoload
+(defun read-aloud-change-engine()
+  "Select another TTS engine."
+  (interactive)
+  (setq read-aloud-engine
+	(ido-completing-read
+	 "read aloud with: "
+	 (cl-loop for (key _) on read-aloud-engines by 'cddr
+		  collect key)
+	 nil nil nil nil read-aloud-engine
+	 )))
+
 (defun read-aloud--cmd ()
-  (plist-get (plist-get read-aloud-engines read-aloud-engine) 'cmd))
+  (let ((cmd
+	 (plist-get (lax-plist-get read-aloud-engines read-aloud-engine) 'cmd)))
+    (unless cmd (user-error "Failed to get the default TTS engine"))
+    cmd))
 
 (defun read-aloud--args ()
-  (plist-get (plist-get read-aloud-engines read-aloud-engine) 'args))
+  (plist-get (lax-plist-get read-aloud-engines read-aloud-engine) 'args))
 
 (defun read-aloud--valid-str-p (str)
   (and str (not (equal "" (string-trim str)))))
@@ -154,7 +169,7 @@ arbitual string like 'buffer', 'word' or 'selection'."
   (kill-process read-aloud--c-pr)
 
   ;; if a tts engine has a separate step to switch itself off, use it
-  (let ((c (plist-get (plist-get read-aloud-engines read-aloud-engine) 'kill)))
+  (let ((c (plist-get (lax-plist-get read-aloud-engines read-aloud-engine) 'kill)))
     (when c
       (start-process-shell-command "read-aloud-kill" read-aloud--logbufname c)))
 

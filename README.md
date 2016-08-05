@@ -11,7 +11,7 @@ buffer.
 ## Requirements
 
 * Emacs 24.4+
-* A working TTS engine that has a CLI to it.
+* A working TTS engine that has a CLI for managing it.
 
 ## Installation
 
@@ -23,11 +23,18 @@ buffer.
 
 ## Usage
 
-* `M-x read-aloud-this`
-* `M-x read-aloud-buf`
+* `M-x read-aloud-this` -- pronounce either the selection or a word
+	under the pointer.
+
+* `M-x read-aloud-buf` -- read the buffer starting from the current
+	cursor position, highlighting the text as it moves down the
+	buffer. Useful only for plain text files.
 
 To stop reading at any time you either run any of the commands above
 _again_, or do `M-x read-aloud-stop`.
+
+* `M-x read-aloud-change-engine` -- select another engine (for this
+  Emacs session). It also shows which one is the current.
 
 
 ## Supported TTS Engines
@@ -62,7 +69,7 @@ Test it:
 
 ### flite
 
-... is the easiest one to use. For example, on Fedora 24:
+... is the easiest one to install & use. For example, on Fedora 24:
 
 	# dnf install flite
 
@@ -72,7 +79,7 @@ Test it:
 
 Add to `~/.emacs`:
 
-	(setq read-aloud-engine 'flite)
+	(setq read-aloud-engine "flite")
 
 ### Microsoft Speech API
 
@@ -81,22 +88,26 @@ interface to SAPI. Install it, then test via:
 
 	> echo hello | cscript "C:\Program Files\Jampal\ptts.vbs"
 
+Add to `~/.emacs`:
+
+	(setq read-aloud-engine "jampal")
+
 
 ## Configuration
 
 To add/modify a tts engine, you'll need to edit `read-aloud-engines`
 plist. Here is the example for Windows:
 
-	(plist-put read-aloud-engines 'jampal
+	(plist-put read-aloud-engines "jampal.en"
 	  '(cmd "cscript"
 			args ("C:\\Program Files\\Jampal\\ptts.vbs" "-r" "8")) )
 
 `args` should be a list or nil. To select a new entry,
 
-	(setq read-aloud-engine 'jampal)
+	(setq read-aloud-engine "jampal.en")
 
 The CL util that communicates w/ the engine must wait until the text
-was pronounced (e.g. not exit immediately), otherwise
+was fully pronounced (e.g. not exit immediately), otherwise
 `(read-aloud-buf)` won't be able to distinguish whether it's time to
 feed the engine w/ another chunk of the text. This is why we use
 spd-say w/ `-w` CLO.
