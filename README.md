@@ -98,7 +98,7 @@ Add to `~/.emacs`:
 To add/modify a tts engine, you'll need to edit `read-aloud-engines`
 plist. Here is the example for Windows:
 
-	(plist-put read-aloud-engines "jampal.en"
+	(lax-plist-put read-aloud-engines "jampal.en"
 	  '(cmd "cscript"
 			args ("C:\\Program Files\\Jampal\\ptts.vbs" "-r" "8")) )
 
