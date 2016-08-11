@@ -107,6 +107,10 @@ But he's just as dead as if he were wrong."))
 	(delete-overlay read-aloud--c-overlay)
 	(setq read-aloud--c-overlay nil))))
 
+(defun read-aloud--overlay-make(beg end)
+  (setq read-aloud--c-overlay (make-overlay beg end))
+  (overlay-put read-aloud--c-overlay 'face 'read-aloud-text-face) )
+
 (defun read-aloud--reset()
   "Reset internal state."
   (setq read-aloud--c-pr nil)
@@ -203,9 +207,7 @@ read. Run it again to stop reading."
 	  (cl-return-from read-aloud-buf)))
 
       ;; highlight text
-      (setq read-aloud--c-overlay
-	    (make-overlay (plist-get tb 'beg) (plist-get tb 'end)))
-      (overlay-put read-aloud--c-overlay 'face 'read-aloud-text-face)
+      (read-aloud--overlay-make (plist-get tb 'beg) (plist-get tb 'end))
 
       (goto-char (plist-get tb 'end))
       (read-aloud--string (plist-get tb 'text) "buffer")
@@ -260,12 +262,14 @@ eof. BUF & POINT are the starting location for the job."
 (cl-defun read-aloud--current-word()
   "Pronounce a word under the pointer. If under there is rubbish,
 ask user for an additional input."
-  (let ((word (current-word)) )
+  (let* ((cw (read-aloud--get-current-word))
+	 (word (nth 2 cw)))
 
     (unless (and word (string-match "[[:alnum:]]" word))
       ;; maybe we should share the hist list w/ `wordnut-completion-hist`?
       (setq word (read-string "read aloud: " word 'read-aloud-word-hist)) )
 
+    (read-aloud--overlay-make (nth 0 cw) (nth 1 cw))
     (read-aloud--string word "word")
     ))
 
@@ -297,6 +301,35 @@ ask user for an additional input."
 (defun read-aloud--u-str-reverse (str)
   "Reverse the STR."
   (apply #'string (reverse (string-to-list str))))
+
+(defun read-aloud--get-current-word()
+  "This is a modified (current-word) that doesn't take any args &
+return (beg end word) or nil."
+  (save-excursion
+    (let* ((oldpoint (point)) (start (point)) (end (point))
+	   (syntaxes "w_")
+	   (not-syntaxes (concat "^" syntaxes)))
+      (skip-syntax-backward syntaxes) (setq start (point))
+      (goto-char oldpoint)
+      (skip-syntax-forward syntaxes) (setq end (point))
+      (when (and (eq start oldpoint) (eq end oldpoint))
+	;; Look for preceding word in same line.
+	(skip-syntax-backward not-syntaxes (line-beginning-position))
+	(if (bolp)
+	    ;; No preceding word in same line.
+	    ;; Look for following word in same line.
+	    (progn
+	      (skip-syntax-forward not-syntaxes (line-end-position))
+	      (setq start (point))
+	      (skip-syntax-forward syntaxes)
+	      (setq end (point)))
+	  (setq end (point))
+	  (skip-syntax-backward syntaxes)
+	  (setq start (point))))
+      ;; If we found something nonempty, return it as a list.
+      (unless (= start end)
+	(list start end (buffer-substring-no-properties start end)))
+      )))
 
 
 
