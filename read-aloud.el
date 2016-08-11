@@ -262,7 +262,7 @@ eof. BUF & POINT are the starting location for the job."
 (cl-defun read-aloud--current-word()
   "Pronounce a word under the pointer. If under there is rubbish,
 ask user for an additional input."
-  (let* ((cw (read-aloud--get-current-word))
+  (let* ((cw (read-aloud--u-current-word))
 	 (word (nth 2 cw)))
 
     (unless (and word (string-match "[[:alnum:]]" word))
@@ -302,7 +302,7 @@ ask user for an additional input."
   "Reverse the STR."
   (apply #'string (reverse (string-to-list str))))
 
-(defun read-aloud--get-current-word()
+(defun read-aloud--u-current-word()
   "This is a modified (current-word) that doesn't take any args &
 return (beg end word) or nil."
   (save-excursion
