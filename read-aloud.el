@@ -102,14 +102,14 @@ But he's just as dead as if he were wrong."))
   (and str (not (equal "" (string-trim str)))))
 
 (defun read-aloud--overlay-rm()
-  (if read-aloud--c-overlay
-      (progn
-	(delete-overlay read-aloud--c-overlay)
-	(setq read-aloud--c-overlay nil))))
+  (when read-aloud--c-overlay
+    (delete-overlay read-aloud--c-overlay)
+    (setq read-aloud--c-overlay nil)))
 
 (defun read-aloud--overlay-make(beg end)
-  (setq read-aloud--c-overlay (make-overlay beg end))
-  (overlay-put read-aloud--c-overlay 'face 'read-aloud-text-face) )
+  (when (and beg end)
+    (setq read-aloud--c-overlay (make-overlay beg end))
+    (overlay-put read-aloud--c-overlay 'face 'read-aloud-text-face) ))
 
 (defun read-aloud--reset()
   "Reset internal state."
