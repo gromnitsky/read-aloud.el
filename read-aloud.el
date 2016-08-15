@@ -90,10 +90,8 @@ But he's just as dead as if he were wrong."))
 	 )))
 
 (defun read-aloud--cmd ()
-  (let ((cmd
-	 (plist-get (lax-plist-get read-aloud-engines read-aloud-engine) 'cmd)))
-    (unless cmd (user-error "Failed to get the default TTS engine"))
-    cmd))
+  (or (plist-get (lax-plist-get read-aloud-engines read-aloud-engine) 'cmd)
+      (user-error "Failed to get the default TTS engine")) )
 
 (defun read-aloud--args ()
   (plist-get (lax-plist-get read-aloud-engines read-aloud-engine) 'args))
