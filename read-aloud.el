@@ -1,7 +1,7 @@
 ;;; read-aloud.el --- A simple interface to TTS engines  -*- lexical-binding: t; -*-
 
 ;; Author: Alexander Gromnitsky <alexander.gromnitsky@gmail.com>
-;; Version: 0.0.1
+;; Version: 0.0.2
 ;; Package-Requires: ((emacs "24.4"))
 ;; Keywords: multimedia
 ;; URL: https://github.com/gromnitsky/read-aloud.el
@@ -27,6 +27,8 @@
     (cmd "flite" args nil)
     "jampal"				; Windows
     (cmd "cscript" args ("C:\\Program Files\\Jampal\\ptts.vbs" "-r" "5"))
+    "say"				; macOS
+    (cmd "say" args nil)
     ))
 
 (defvar read-aloud-max 160)		; chars

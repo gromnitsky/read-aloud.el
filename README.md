@@ -93,6 +93,15 @@ Add to `~/.emacs`:
 	(setq read-aloud-engine "jampal")
 
 
+### macOS Speech Synthesis
+
+Add to `~/.emacs`:
+
+	(setq read-aloud-engine "say")
+
+By default it uses the settings from System Preferences.
+
+
 ## Configuration
 
 To add/modify a tts engine, you'll need to edit `read-aloud-engines`
